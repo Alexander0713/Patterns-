@@ -1,4 +1,4 @@
-name: Bank App Tests
+name: Test Bank Application
 
 on: [push, pull_request]
 
@@ -7,10 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup Java 11
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '11'
         distribution: 'temurin'
@@ -21,29 +21,14 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x gradlew
       
-    - name: Start Bank Application
+    - name: Start Bank App
       run: |
-        nohup java -jar artifacts/app-ibank.jar -P:profile=test > app.log 2>&1 &
-        echo $! > app.pid
+        java -jar artifacts/app-ibank.jar -P:profile=test &
         sleep 10
         
-    - name: Verify App is Running
-      run: |
-        timeout 30 bash -c 'until curl -f http://localhost:9999; do sleep 2; done'
-        
     - name: Run Tests
-      run: ./gradlew test --info --stacktrace
-      
-    - name: Stop Application
-      if: always()
       run: |
-        if [ -f app.pid ]; then
-          kill -9 $(cat app.pid) 2>/dev/null || true
-        fi
-        
-    - name: Upload Test Results
-      if: failure()
-      uses: actions/upload-artifact@v3
-      with:
-        name: test-reports
-        path: build/reports/tests/test/
+        ./gradlew test \
+          -Dselenide.headless=true \
+          -Dselenide.browser=chrome \
+          -Dchromeoptions.args="--no-sandbox,--disable-dev-shm-usage"
